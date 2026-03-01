@@ -25,6 +25,18 @@
       {
         "command": "fileclrk.copyRelativePath",
         "title": "FileClrk: Copy Relative Path"
+      },
+      {
+        "command": "fileclrk.deleteFile",
+        "title": "FileClrk: Delete File"
+      },
+      {
+        "command": "fileclrk.createFolder",
+        "title": "FileClrk: Create Folder"
+      },
+      {
+        "command": "fileclrk.renameFile",
+        "title": "FileClrk: Rename File"
       }
     ]
   },
