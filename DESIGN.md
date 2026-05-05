@@ -31,3 +31,13 @@ Create a new folder
 ### Rename af file
 
 Rename the focused file.
+
+### Autocomplete markdown-style links with relative paths
+
+When editing a markdown file, typing `[text](` will trigger autocompletion for
+file and folder paths relative to the current document's directory.
+
+- Completions are relative to the currently open file (not the workspace root).
+- Hidden files/folders (prefixed with `.`) are excluded.
+- Selecting a folder appends `/` and re-triggers completions for sub-navigation.
+- Works for both flat filenames and multi-level paths (e.g. `../` or `sub/dir/`).
