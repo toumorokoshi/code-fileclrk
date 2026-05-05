@@ -7,14 +7,14 @@
     "type": "git",
     "url": "https://github.com/toumorokoshi/code-fileclrk"
   },
-  "version": "0.0.3",
+  "version": "0.0.4",
   "engines": {
     "vscode": "^1.105.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": ["onLanguage:markdown"],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [

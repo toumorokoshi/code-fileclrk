@@ -14,4 +14,4 @@ format:
     npx prettier --write "src/**/*.ts"
 
 install-antigravity:
-    antigravity --install-extension ./fileclrk-0.0.3.vsix
+    antigravity --install-extension ./fileclrk-0.0.4.vsix
