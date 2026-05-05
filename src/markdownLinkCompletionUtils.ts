@@ -59,12 +59,15 @@ export interface CompletionEntry {
   label: string;
   insertText: string;
   isDirectory: boolean;
+  isAnchor: boolean;
   detail: string;
   filterText: string;
 }
 
 /**
  * Build completion entries for markdown link paths relative to the document directory.
+ * Uses case-insensitive substring matching on the filename so users can search
+ * by any part of the name (e.g. typing "notes" matches "my-notes.md").
  * Returns plain data objects with no vscode dependency.
  */
 export const buildCompletionEntries = (
@@ -73,9 +76,14 @@ export const buildCompletionEntries = (
 ): CompletionEntry[] => {
   const { searchDir, prefix } = resolveSearchDir(documentDir, partialPath);
   const entries = listDirEntries(searchDir);
+  const lowerPrefix = prefix.toLowerCase();
 
   return entries
-    .filter((e) => !e.name.startsWith(".") && e.name.startsWith(prefix))
+    .filter(
+      (e) =>
+        !e.name.startsWith(".") &&
+        e.name.toLowerCase().includes(lowerPrefix),
+    )
     .map((e) => {
       const label = e.isDirectory ? `${e.name}/` : e.name;
       const absTarget = path.join(searchDir, e.name);
@@ -86,8 +94,71 @@ export const buildCompletionEntries = (
         label,
         insertText,
         isDirectory: e.isDirectory,
+        isAnchor: false,
         detail: insertText,
         filterText: label,
       };
     });
+};
+
+/**
+ * Convert a markdown heading text to a GitHub-style anchor slug.
+ * Algorithm:
+ *  1. Strip inline markdown formatting (bold, italic, code, links)
+ *  2. Lowercase
+ *  3. Remove any character that is not alphanumeric, space, or hyphen
+ *  4. Replace spaces (and runs of spaces) with a single hyphen
+ */
+export const slugifyHeading = (text: string): string =>
+  text
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // strip inline links, keep text
+    .replace(/[`*_~]/g, "") // strip formatting characters
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "") // keep word chars, spaces, hyphens
+    .replace(/\s+/g, "-") // spaces → hyphens
+    .replace(/-+/g, "-") // collapse consecutive hyphens
+    .replace(/^-|-$/g, ""); // trim leading/trailing hyphens
+
+/**
+ * Read a markdown file and return all heading anchor slugs derived from
+ * ATX-style headings (`#`, `##`, … `######`).
+ * Returns [] if the file cannot be read or is not a markdown file.
+ */
+export const extractMarkdownHeadingAnchors = (filePath: string): string[] => {
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    return content
+      .split("\n")
+      .map((line) => /^#{1,6}\s+(.+)$/.exec(line.trim()))
+      .filter((m): m is RegExpExecArray => m !== null)
+      .map((m) => slugifyHeading(m[1].trim()));
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Build completion entries for anchor links (`#heading-slug`) inside a given
+ * target markdown file. Uses case-insensitive substring matching on the slug.
+ *
+ * The `insertText` is just the slug (without `#`) so that the provider can
+ * replace only the fragment portion that follows the `#` the user already typed.
+ */
+export const buildAnchorCompletionEntries = (
+  absFilePath: string,
+  anchorFragment: string,
+): CompletionEntry[] => {
+  const anchors = extractMarkdownHeadingAnchors(absFilePath);
+  const lowerFragment = anchorFragment.toLowerCase();
+
+  return anchors
+    .filter((slug) => slug.includes(lowerFragment))
+    .map((slug) => ({
+      label: `#${slug}`,
+      insertText: slug, // provider uses a range to replace only the post-# fragment
+      isDirectory: false,
+      isAnchor: true,
+      detail: `Heading anchor: #${slug}`,
+      filterText: slug,
+    }));
 };

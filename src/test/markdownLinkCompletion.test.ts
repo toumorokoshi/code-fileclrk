@@ -6,6 +6,9 @@ import {
   buildMarkdownRelativePath,
   resolveSearchDir,
   buildCompletionEntries,
+  slugifyHeading,
+  extractMarkdownHeadingAnchors,
+  buildAnchorCompletionEntries,
 } from "../markdownLinkCompletionUtils";
 
 // Helper: create a temp directory tree for tests
@@ -82,7 +85,7 @@ suite("markdownLinkCompletion", () => {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         "README.md": "# readme",
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        "notes.md": "notes",
+        "meeting-notes.md": "notes",
         // eslint-disable-next-line @typescript-eslint/naming-convention
         "images/photo.png": "data",
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -98,15 +101,36 @@ suite("markdownLinkCompletion", () => {
       const items = buildCompletionEntries(tmpDir, "");
       const labels = items.map((i) => i.label);
       assert.ok(labels.includes("README.md"), "should include README.md");
-      assert.ok(labels.includes("notes.md"), "should include notes.md");
+      assert.ok(
+        labels.includes("meeting-notes.md"),
+        "should include meeting-notes.md",
+      );
       assert.ok(labels.includes("images/"), "should include images/ directory");
       assert.ok(!labels.includes(".hidden"), "should exclude hidden files");
     });
 
-    test("filters by prefix", () => {
+    test("prefix match (startsWith still works as substring)", () => {
       const items = buildCompletionEntries(tmpDir, "RE");
       const labels = items.map((i) => i.label);
       assert.deepStrictEqual(labels, ["README.md"]);
+    });
+
+    test("substring match finds mid-name fragment", () => {
+      const items = buildCompletionEntries(tmpDir, "notes");
+      const labels = items.map((i) => i.label);
+      assert.ok(
+        labels.includes("meeting-notes.md"),
+        "substring 'notes' should match meeting-notes.md",
+      );
+    });
+
+    test("substring match is case-insensitive", () => {
+      const items = buildCompletionEntries(tmpDir, "readme");
+      const labels = items.map((i) => i.label);
+      assert.ok(
+        labels.includes("README.md"),
+        "case-insensitive match should find README.md",
+      );
     });
 
     test("navigates into subdirectory", () => {
@@ -132,6 +156,150 @@ suite("markdownLinkCompletion", () => {
     test("returns empty array for non-existent partial path dir", () => {
       const items = buildCompletionEntries(tmpDir, "nonexistent/");
       assert.deepStrictEqual(items, []);
+    });
+  });
+
+  suite("slugifyHeading", () => {
+    test("lowercases and replaces spaces with hyphens", () => {
+      assert.strictEqual(slugifyHeading("Hello World"), "hello-world");
+    });
+
+    test("strips inline code backticks", () => {
+      assert.strictEqual(slugifyHeading("Use `fs.readFile`"), "use-fsreadfile");
+    });
+
+    test("strips bold and italic markers", () => {
+      assert.strictEqual(slugifyHeading("**Bold** and _italic_"), "bold-and-italic");
+    });
+
+    test("strips inline links, keeps link text", () => {
+      assert.strictEqual(
+        slugifyHeading("[GitHub](https://github.com) Overview"),
+        "github-overview",
+      );
+    });
+
+    test("collapses multiple hyphens", () => {
+      assert.strictEqual(slugifyHeading("foo  bar"), "foo-bar");
+    });
+
+    test("removes leading and trailing hyphens", () => {
+      assert.strictEqual(slugifyHeading("  hello  "), "hello");
+    });
+  });
+
+  suite("extractMarkdownHeadingAnchors", () => {
+    let tmpDir: string;
+
+    setup(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "fileclrk-anchor-"));
+    });
+
+    teardown(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    test("extracts ATX headings of all levels", () => {
+      const file = path.join(tmpDir, "doc.md");
+      fs.writeFileSync(
+        file,
+        [
+          "# Introduction",
+          "## Getting Started",
+          "### Installation Guide",
+          "#### Sub Topic",
+          "not a heading",
+          "## API Reference",
+        ].join("\n"),
+      );
+      const anchors = extractMarkdownHeadingAnchors(file);
+      assert.deepStrictEqual(anchors, [
+        "introduction",
+        "getting-started",
+        "installation-guide",
+        "sub-topic",
+        "api-reference",
+      ]);
+    });
+
+    test("returns empty array for non-existent file", () => {
+      const anchors = extractMarkdownHeadingAnchors("/nonexistent/path.md");
+      assert.deepStrictEqual(anchors, []);
+    });
+
+    test("returns empty array for file with no headings", () => {
+      const file = path.join(tmpDir, "plain.md");
+      fs.writeFileSync(file, "Just some text\nNo headings here");
+      const anchors = extractMarkdownHeadingAnchors(file);
+      assert.deepStrictEqual(anchors, []);
+    });
+  });
+
+  suite("buildAnchorCompletionEntries", () => {
+    let tmpDir: string;
+    let mdFile: string;
+
+    setup(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "fileclrk-anchor-"));
+      mdFile = path.join(tmpDir, "guide.md");
+      fs.writeFileSync(
+        mdFile,
+        [
+          "# Introduction",
+          "## Getting Started",
+          "## API Reference",
+          "### Advanced Usage",
+        ].join("\n"),
+      );
+    });
+
+    teardown(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    test("returns all anchors when fragment is empty", () => {
+      const entries = buildAnchorCompletionEntries(mdFile, "");
+      const labels = entries.map((e) => e.label);
+      assert.deepStrictEqual(labels, [
+        "#introduction",
+        "#getting-started",
+        "#api-reference",
+        "#advanced-usage",
+      ]);
+    });
+
+    test("filters anchors by substring match", () => {
+      const entries = buildAnchorCompletionEntries(mdFile, "start");
+      const labels = entries.map((e) => e.label);
+      assert.deepStrictEqual(labels, ["#getting-started"]);
+    });
+
+    test("filter is case-insensitive", () => {
+      const entries = buildAnchorCompletionEntries(mdFile, "API");
+      const labels = entries.map((e) => e.label);
+      assert.ok(
+        labels.includes("#api-reference"),
+        "case-insensitive match should find #api-reference",
+      );
+    });
+
+    test("insertText is slug without hash", () => {
+      const entries = buildAnchorCompletionEntries(mdFile, "intro");
+      assert.strictEqual(entries.length, 1);
+      assert.strictEqual(entries[0].insertText, "introduction");
+    });
+
+    test("isAnchor is true for all entries", () => {
+      const entries = buildAnchorCompletionEntries(mdFile, "");
+      assert.ok(entries.every((e) => e.isAnchor));
+    });
+
+    test("returns empty array for non-existent file", () => {
+      const entries = buildAnchorCompletionEntries(
+        "/no/such/file.md",
+        "",
+      );
+      assert.deepStrictEqual(entries, []);
     });
   });
 });

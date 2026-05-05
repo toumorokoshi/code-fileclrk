@@ -21,6 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
       new MarkdownLinkCompletionProvider(),
       "(",
       "/",
+      "#",
     ),
   );
 }

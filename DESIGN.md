@@ -39,5 +39,17 @@ file and folder paths relative to the current document's directory.
 
 - Completions are relative to the currently open file (not the workspace root).
 - Hidden files/folders (prefixed with `.`) are excluded.
+- **Substring search**: typing any fragment of a filename (e.g. `notes`) matches
+  files containing that substring anywhere in the name (e.g. `meeting-notes.md`).
+  Matching is case-insensitive.
 - Selecting a folder appends `/` and re-triggers completions for sub-navigation.
 - Works for both flat filenames and multi-level paths (e.g. `../` or `sub/dir/`).
+
+#### Anchor link autocomplete
+
+Once a file path has been entered, typing `#` triggers anchor autocompletion:
+
+- Headings in the target file are extracted and converted to GitHub-style slugs.
+- Slug matching is also case-insensitive substring search.
+- The anchor fragment (text after `#`) is replaced in-place when a completion
+  is selected, leaving the file path intact.
