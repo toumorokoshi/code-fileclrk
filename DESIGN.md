@@ -32,3 +32,10 @@ Create a new folder
 
 Rename the focused file.
 
+### Insert Markdown Link
+
+A command to insert a markdown link into the active editor:
+
+1. Triggers an autocomplete dropdown of all workspace files.
+2. If a markdown file is selected, triggers a second dropdown to select a heading anchor (or no anchor).
+3. Inserts a standard markdown link `[text](url)` at the cursor. If text is selected, it uses that text; otherwise, it defaults to the file's basename.

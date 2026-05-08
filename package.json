@@ -36,6 +36,10 @@
       {
         "command": "fileclrk.renameFile",
         "title": "FileClrk: Rename File"
+      },
+      {
+        "command": "fileclrk.insertMarkdownLink",
+        "title": "FileClrk: Insert Markdown Link"
       }
     ]
   },

@@ -4,6 +4,7 @@ import { createFolder } from "./createFolder";
 import { copyRelativePath } from "./copyRelativePath";
 import { deleteFile } from "./deleteFile";
 import { renameFile } from "./renameFile";
+import { insertMarkdownLink } from "./insertMarkdownLink";
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -16,6 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand("fileclrk.deleteFile", deleteFile),
     vscode.commands.registerCommand("fileclrk.renameFile", renameFile),
+    vscode.commands.registerCommand("fileclrk.insertMarkdownLink", insertMarkdownLink),
   );
 }
 
