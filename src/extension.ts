@@ -4,7 +4,7 @@ import { createFolder } from "./createFolder";
 import { copyRelativePath } from "./copyRelativePath";
 import { deleteFile } from "./deleteFile";
 import { renameFile } from "./renameFile";
-import { MarkdownLinkCompletionProvider } from "./markdownLinkCompletion";
+
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -16,13 +16,6 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand("fileclrk.deleteFile", deleteFile),
     vscode.commands.registerCommand("fileclrk.renameFile", renameFile),
-    vscode.languages.registerCompletionItemProvider(
-      { language: "markdown" },
-      new MarkdownLinkCompletionProvider(),
-      "(",
-      "/",
-      "#",
-    ),
   );
 }
 
